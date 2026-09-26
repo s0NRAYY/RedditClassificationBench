@@ -1,0 +1,27 @@
+name: subreddit_dynamic
+version: 1
+text_modes:
+  - title
+  - title+selftext
+candidate_representations:
+  - name-only
+  - anonymous-id+description
+community_tracks:
+  - seen
+  - unseen
+difficulties:
+  - random
+  - semantic
+  - hard
+candidate_counts: [4, 8, 16, 32, 64]
+benchmark_seed: 20260926
+splits:
+  unseen_fraction: 0.2
+  seen_train_fraction: 0.8
+  seen_dev_fraction: 0.1
+negative_mining:
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  revision: 1110a243fdf4706b3f48f1d95db1a4f5529b4d41
+  normalize: true
+  metric: cosine
+  semantic_pool_size: 128

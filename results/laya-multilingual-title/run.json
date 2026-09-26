@@ -1,0 +1,62 @@
+{
+  "model": "aac6fef/laya-multilingual-mlx",
+  "revision": "f2b4faf51023039425946074e2cf1361d2db11d5",
+  "dtype": "float16",
+  "laya_mlx_version": "0.2.0",
+  "model_runtime": {
+    "max_len": 1024,
+    "head_max_len": 256,
+    "temperature_raw": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "temperature_effective": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "temperature_by_options_raw": {},
+    "temperature_by_options_effective": {}
+  },
+  "python_version": "3.14.7",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "byteorder": "little",
+  "dataset_build": {
+    "rows_read": 1048855,
+    "rejected_missing_title": 0,
+    "rejected_duplicate_titles": 9077,
+    "title_posts": 1026755,
+    "eligible_posts": 874928,
+    "eligible_communities": 1242,
+    "negative_pools": 3726,
+    "evaluation_instances": 949206,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "benchmark_seed": 20260926,
+    "available_text_modes": [
+      "title"
+    ],
+    "source_mode": "title-only"
+  },
+  "text_modes": [
+    "title"
+  ],
+  "representations": [
+    "name-only",
+    "anonymous-id+description"
+  ],
+  "difficulties": [
+    "random",
+    "semantic",
+    "hard"
+  ],
+  "candidate_counts": [
+    4,
+    8,
+    16,
+    32,
+    64
+  ],
+  "selected_posts": 12384
+}

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it using this metadata."
+title: "Social Routing Bench"
+type: software
+authors:
+  - name: "Social Routing Bench contributors"
+version: 0.2.0
+date-released: 2026-09-26
+license: MIT
+abstract: >-
+  A reproducible benchmark for selecting an action from a dynamic,
+  runtime-defined set of social communities, with random, semantic, and hard
+  negative candidates and seen- and unseen-community evaluation tracks.
+keywords:
+  - benchmark
+  - decision models
+  - dynamic action spaces
+  - Reddit
+  - social routing

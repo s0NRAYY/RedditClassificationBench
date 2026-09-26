@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "social-routing-bench"
+version = "0.2.0"
+description = "Dynamic social routing benchmark"
+readme = "README.md"
+license = "MIT"
+keywords = ["benchmark", "decision-models", "dynamic-action-spaces", "reddit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "pyarrow>=18",
+  "PyYAML>=6.0",
+  "sentence-transformers>=3.4",
+]
+
+[project.optional-dependencies]
+laya = ["laya-mlx==0.2.0"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+build-subreddit-dynamic = "dataset:main"
+evaluate-subreddit-dynamic = "evaluation:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["dataset", "evaluation", "metrics", "sampling"]
+packages = ["adapters"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

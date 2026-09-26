@@ -1,0 +1,13 @@
+model: aac6fef/laya-multilingual-mlx
+revision: f2b4faf51023039425946074e2cf1361d2db11d5
+dtype: float16
+device: gpu
+batch_size: 32
+compile: false
+pad_to_multiple: null
+posts_per_community: 10
+bootstrap_samples: 1000
+representations:
+  - name-only
+  - anonymous-id+description
+instruction: Select the community where this Reddit post was originally published. Choose exactly one option.
