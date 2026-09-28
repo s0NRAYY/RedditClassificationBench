@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import sys
-from importlib.metadata import PackageNotFoundError, version
 from collections import defaultdict
 from pathlib import Path
 
@@ -13,11 +13,27 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import yaml
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
+from rich.table import Table
 
-from adapters import LayaAdapter
+from adapters import CommandAdapter
+from credentials import model_credentials
 from dataset import post_text
 from metrics import aggregate, read_jsonl, write_metrics
+from model_registry import resolve_model
 from sampling import candidates_for_k, stable_uint
+
+console = Console(stderr=True)
 
 
 def _load_rows(path: Path) -> list[dict]:
@@ -92,15 +108,23 @@ def _prediction_rows(
     batch_latency_ms: float,
 ) -> list[dict]:
     count = len(metadata)
-    input_tokens = result["usage"]["input_tokens"] / count
+    usage = result.get("usage") or {}
+    input_tokens = float(usage.get("input_tokens", 0)) / count
+    output_tokens = float(usage.get("output_tokens", 0)) / count
+    forward_count = float(usage.get("forward_count", 1)) / count
+    probability_source = result.get("probability_source", "native")
     rows = []
     for qid, meta in metadata.items():
         answer = result["answers"][qid]
-        raw_probabilities = [float(answer["probabilities"][label]) for label in meta["labels"]]
-        probability_sum = sum(raw_probabilities)
-        if probability_sum <= 0:
-            raise ValueError(f"Laya returned zero probability mass for {qid}")
-        probabilities = [value / probability_sum for value in raw_probabilities]
+        raw = answer.get("probabilities")
+        probabilities = None
+        probability_sum = None
+        if raw is not None:
+            raw_probabilities = [float(raw[label]) for label in meta["labels"]]
+            probability_sum = sum(raw_probabilities)
+            if probability_sum <= 0:
+                raise ValueError(f"Model returned zero probability mass for {qid}")
+            probabilities = [value / probability_sum for value in raw_probabilities]
         label_to_candidate = dict(zip(meta["labels"], meta["candidates"], strict=True))
         prediction = label_to_candidate[answer["choice"]]
         target_index = meta["candidates"].index(post["subreddit"])
@@ -117,10 +141,17 @@ def _prediction_rows(
                 "difficulty": meta["difficulty"],
                 "k": meta["k"],
                 "target_position": target_index,
-                "true_probability": probabilities[target_index],
-                "confidence": max(probabilities),
-                "squared_probability_sum": sum(value * value for value in probabilities),
+                "true_probability": (
+                    probabilities[target_index] if probabilities is not None else None
+                ),
+                "confidence": max(probabilities) if probabilities is not None else None,
+                "squared_probability_sum": (
+                    sum(value * value for value in probabilities)
+                    if probabilities is not None
+                    else None
+                ),
                 "public_probability_sum": probability_sum,
+                "probability_source": probability_source,
                 "candidate_fingerprint": hashlib.sha256(
                     "\0".join(meta["candidates"]).encode()
                 ).hexdigest(),
@@ -128,8 +159,9 @@ def _prediction_rows(
                 "batch_questions": count,
                 "amortized_latency_ms": batch_latency_ms / count,
                 "input_tokens": input_tokens,
-                "output_tokens": 0,
-                "api_cost_usd": 0.0,
+                "output_tokens": output_tokens,
+                "forward_count": forward_count,
+                "api_cost_usd": float(usage.get("api_cost_usd", 0)) / count,
             }
         )
     return rows
@@ -139,6 +171,74 @@ def _dataset_posts(path: Path, selected_ids: set[str]) -> dict[str, dict]:
     table = pq.read_table(path)
     mask = pc.is_in(table["post_id"], value_set=pa.array(sorted(selected_ids)))
     return {row["post_id"]: row for row in table.filter(mask).to_pylist()}
+
+
+def _build_adapter(args: argparse.Namespace, config: dict) -> tuple[CommandAdapter, str, dict]:
+    requested_model = getattr(args, "model", None) or config["model"]
+    model, registry = resolve_model(requested_model)
+    adapter_name = (
+        getattr(args, "adapter", None)
+        or config.get("adapter")
+        or registry.get("adapter")
+    )
+    command = getattr(args, "command_worker", None) or config.get("command")
+    worker_env = None
+    saved_credentials = model_credentials(model)
+    effective_revision = config.get("revision") or registry.get("revision")
+    if command is None:
+        if adapter_name is None:
+            raise ValueError(
+                f"No registered adapter for {model}; pass --command-worker"
+            )
+        options = dict(registry.get("options", {}))
+        options.update(config.get("adapter_options", {}))
+        for key in ("probabilities", "max_questions", "max_options"):
+            if key in registry:
+                options.setdefault(key, registry[key])
+        if effective_revision:
+            options["revision"] = effective_revision
+        for key in (
+            "dtype",
+            "batch_size",
+            "device",
+            "compile",
+            "pad_to_multiple",
+        ):
+            if key in config:
+                options.setdefault(key, config[key])
+        endpoint = (
+            getattr(args, "endpoint", None)
+            or config.get("endpoint")
+            or saved_credentials.get("endpoint")
+        )
+        if endpoint:
+            options["endpoint"] = endpoint
+        api_key = getattr(args, "api_key", None)
+        if api_key is None:
+            api_key = saved_credentials.get("api_key")
+        if api_key:
+            options["api_key_env"] = "SRB_MODEL_API_KEY"
+            worker_env = os.environ.copy()
+            worker_env["SRB_MODEL_API_KEY"] = api_key
+        runtime_model = registry.get("runtime_model", model)
+        command = [
+            sys.executable,
+            "-m",
+            "model_worker",
+            "--adapter",
+            adapter_name,
+            "--model",
+            runtime_model,
+            "--options",
+            json.dumps(options, separators=(",", ":")),
+        ]
+    adapter = CommandAdapter(
+        command,
+        model=model,
+        revision=effective_revision,
+        env=worker_env,
+    )
+    return adapter, model, registry
 
 
 def evaluate(args: argparse.Namespace) -> list[dict]:
@@ -172,27 +272,20 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
         if row["post_id"] in selected_ids
     }
 
-    try:
-        laya_version = version("laya-mlx")
-    except PackageNotFoundError:
-        laya_version = "unavailable"
-
-    adapter = LayaAdapter(
-        model_config["model"],
-        revision=model_config.get("revision"),
-        dtype=model_config["dtype"],
-        batch_size=int(model_config["batch_size"]),
-        device=model_config["device"],
-        compile=bool(model_config.get("compile", False)),
-        pad_to_multiple=model_config.get("pad_to_multiple"),
-    )
+    requested_model = getattr(args, "model", None) or model_config["model"]
+    console.print(f"[bold cyan]Loading model[/] [white]{requested_model}[/]...")
+    adapter, model, registry = _build_adapter(args, model_config)
 
     run = {
-        "model": model_config["model"],
-        "revision": model_config.get("revision"),
-        "dtype": model_config["dtype"],
-        "laya_mlx_version": laya_version,
-        "model_runtime": getattr(adapter, "metadata", {}),
+        "model": model,
+        "revision": getattr(
+            adapter,
+            "revision",
+            model_config.get("revision") or registry.get("revision"),
+        ),
+        "adapter": adapter.capabilities,
+        "registry_entry": registry,
+        "model_runtime": adapter.metadata,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
         "byteorder": sys.byteorder,
@@ -213,10 +306,62 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
     if predictions_path.exists():
         completed = {row["prediction_id"] for row in read_jsonl(predictions_path)}
 
+    expected_predictions = (
+        len(selected)
+        * len(text_modes)
+        * len(model_config["representations"])
+        * len(task_config["difficulties"])
+        * len(task_config["candidate_counts"])
+    )
+    configuration = (
+        ("Model", model),
+        ("Dataset", str(dataset_dir)),
+        ("Task config", str(args.task_config)),
+        ("Output", str(output_dir)),
+        ("Posts / community", str(args.posts_per_community or model_config["posts_per_community"])),
+        ("Text modes", ", ".join(text_modes)),
+        ("Representations", ", ".join(model_config["representations"])),
+        ("Difficulties", ", ".join(task_config["difficulties"])),
+        ("Candidate counts", ", ".join(map(str, task_config["candidate_counts"]))),
+        ("Selected posts", str(len(selected))),
+        ("Predictions", f"{len(completed)} completed / {expected_predictions} total"),
+    )
+    details = Table.grid(padding=(0, 2))
+    details.add_column(style="cyan", justify="right")
+    details.add_column(style="white")
+    for label, value in configuration:
+        details.add_row(label, value)
+    console.print(
+        Panel(
+            details,
+            title="[bold cyan]⚙ Benchmark Configuration[/]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
+
+    console.print("[cyan]◌[/] Warming up model...")
     adapter.warmup()
 
-    with predictions_path.open("a", encoding="utf-8") as output:
-        for index, selected_instance in enumerate(selected, start=1):
+    written = 0
+    progress = Progress(
+        SpinnerColumn(style="cyan"),
+        TextColumn("[bold cyan]{task.description}"),
+        BarColumn(bar_width=None, style="bright_black", complete_style="cyan"),
+        TaskProgressColumn(),
+        MofNCompleteColumn(),
+        TimeRemainingColumn(),
+        TextColumn("[magenta]{task.fields[predictions]} predictions"),
+        console=console,
+        expand=True,
+    )
+    task_id = progress.add_task(
+        "Evaluating",
+        total=len(selected),
+        predictions=len(completed),
+    )
+    with progress, predictions_path.open("a", encoding="utf-8") as output:
+        for selected_instance in selected:
             post = posts[selected_instance["post_id"]]
             track = selected_instance["community_track"]
             shuffle_seeds = {
@@ -250,13 +395,20 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
                     batch_questions = {qid: questions[qid] for qid in qids}
                     batch_metadata = {qid: metadata[qid] for qid in qids}
                     result, latency_ms = adapter.predict(state, batch_questions)
-                    for row in _prediction_rows(
+                    prediction_rows = _prediction_rows(
                         post, track, text_mode, result, batch_metadata, latency_ms
-                    ):
+                    )
+                    for row in prediction_rows:
                         output.write(json.dumps(row, separators=(",", ":")) + "\n")
+                    written += len(prediction_rows)
+                    progress.update(
+                        task_id,
+                        predictions=len(completed) + written,
+                    )
                     output.flush()
-            if index % 100 == 0 or index == len(selected):
-                print(f"evaluated {index}/{len(selected)} posts", flush=True)
+            progress.advance(task_id)
+    console.print("[cyan]◌[/] Writing metrics...")
+    adapter.close()
 
     rows = read_jsonl(predictions_path)
     metrics = aggregate(
@@ -273,6 +425,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--config", default="configs/laya.yaml")
+    parser.add_argument("--model")
+    parser.add_argument("--adapter")
+    parser.add_argument("--endpoint")
+    parser.add_argument("--command-worker")
     parser.add_argument("--task-config", default="tasks/subreddit_dynamic/task.yaml")
     parser.add_argument("--posts-per-community", type=int)
     parser.add_argument("--text-modes", nargs="+", choices=("title", "title+selftext"))

@@ -68,6 +68,9 @@ def aggregate(rows: list[dict], *, bootstrap_samples: int = 1000, seed: int = 0)
         latencies = np.fromiter(
             (row["amortized_latency_ms"] for row in group), dtype=np.float64
         )
+        probability_rows = [
+            row for row in group if row.get("true_probability") is not None
+        ]
         metric = dict(zip(_GROUP_FIELDS, key, strict=True))
         metric.update(
             examples=len(group),
@@ -78,25 +81,41 @@ def aggregate(rows: list[dict], *, bootstrap_samples: int = 1000, seed: int = 0)
             macro_community_accuracy=float(
                 np.mean([np.mean(values) for values in per_community.values()])
             ),
-            nll=float(
-                np.mean([-math.log(max(row["true_probability"], 1e-12)) for row in group])
-            ),
-            brier=float(
-                np.mean(
-                    [
-                        row["squared_probability_sum"]
-                        - 2 * row["true_probability"]
-                        + 1
-                        for row in group
-                    ]
+            probability_source=group[0].get("probability_source", "native"),
+            nll=(
+                float(
+                    np.mean(
+                        [
+                            -math.log(max(row["true_probability"], 1e-12))
+                            for row in probability_rows
+                        ]
+                    )
                 )
+                if probability_rows
+                else None
             ),
-            ece_15=_ece(group),
-            aurc=_aurc(group),
+            brier=(
+                float(
+                    np.mean(
+                        [
+                            row["squared_probability_sum"]
+                            - 2 * row["true_probability"]
+                            + 1
+                            for row in probability_rows
+                        ]
+                    )
+                )
+                if probability_rows
+                else None
+            ),
+            ece_15=_ece(probability_rows) if probability_rows else None,
+            aurc=_aurc(probability_rows) if probability_rows else None,
             latency_ms_p50=float(np.quantile(latencies, 0.5)),
             latency_ms_p95=float(np.quantile(latencies, 0.95)),
             mean_input_tokens=float(np.mean([row["input_tokens"] for row in group])),
-            api_cost_usd=0.0,
+            mean_output_tokens=float(np.mean([row.get("output_tokens", 0) for row in group])),
+            mean_forward_count=float(np.mean([row.get("forward_count", 1) for row in group])),
+            api_cost_usd=float(sum(row.get("api_cost_usd", 0) for row in group)),
         )
         output.append(metric)
     return output

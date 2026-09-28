@@ -14,13 +14,17 @@ def _parquet(path: Path, rows: list[dict]) -> None:
     pq.write_table(pa.Table.from_pylist(rows), path)
 
 
-class FakeLaya:
-    def __init__(self, *args, **kwargs):
-        pass
+class FakeAdapter:
+    capabilities = {
+        "protocol": 1,
+        "probabilities": "native",
+        "max_questions": None,
+        "max_options": None,
+    }
+    metadata = {"fake": True}
 
     def warmup(self):
         pass
-
     def predict(self, state, questions):
         answers = {}
         tokens = 0
@@ -33,6 +37,9 @@ class FakeLaya:
             }
             tokens += len(state.split()) + len(labels)
         return {"answers": answers, "usage": {"input_tokens": tokens}}, 12.0
+
+    def close(self):
+        pass
 
 
 def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
@@ -125,7 +132,11 @@ instruction: Select one.
         posts_per_community=None,
         text_modes=None,
     )
-    monkeypatch.setattr(evaluation, "LayaAdapter", FakeLaya)
+    monkeypatch.setattr(
+        evaluation,
+        "_build_adapter",
+        lambda args, config: (FakeAdapter(), "fake", {}),
+    )
 
     metrics = evaluate(args)
     first_count = len((output / "predictions.jsonl").read_text().splitlines())

@@ -1,3 +1,3 @@
-from .laya import LayaAdapter
+from .command import CommandAdapter
 
-__all__ = ["LayaAdapter"]
+__all__ = ["CommandAdapter"]

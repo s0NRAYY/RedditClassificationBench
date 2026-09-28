@@ -2,6 +2,8 @@
 
 The v1 benchmark contains one task: dynamic subreddit routing. A model receives a Reddit post and a runtime-defined candidate set, then selects the post's original community.
 
+> **Public alpha:** contributors and benchmark feedback wanted. The worker protocol and supported adapters are usable, but this is not yet a finished universal benchmark.
+
 The builder creates one paired post set. `title` and `title+selftext` are views over the same `post_id`; splits, targets, negative pools, and candidate permutations do not change between text modes.
 
 ## Build
@@ -38,7 +40,43 @@ build.json
 
 The embedding model and exact revision used for negative mining are frozen in `tasks/subreddit_dynamic/task.yaml`.
 
-## Evaluate Laya
+## Evaluate Decision Index models
+
+The CLI resolves known [Jev Decision Index](https://huggingface.co/spaces/multimodalart/jev-decision-index) models to isolated runtime workers:
+
+```bash
+srb models list
+srb doctor hf://AlexWortega/openjev
+python -m pip install -e '.[openjev]'
+srb run hf://AlexWortega/openjev \
+  --dataset data/subreddit_dynamic \
+  --output results/openjev
+```
+
+Built-in worker families cover System One HTTP, Surogate, OpenJev, Intern-Decision, Transformers models exposing `predict`, GLiNER2, and Laya. On the first HTTP run, the CLI securely prompts for the endpoint and API key, then saves them per model in `~/.config/social-routing-bench/credentials.json` with mode `0600`:
+
+```bash
+srb configure hf://jaredpalmer/kev-4b
+srb doctor hf://jaredpalmer/kev-4b
+srb run hf://jaredpalmer/kev-4b \
+  --dataset data/subreddit_dynamic \
+  --output results/kev-4b
+```
+
+`srb configure` changes saved credentials. The API key is masked while typing and reaches the worker only through its environment; it is never placed in process arguments or run metadata. An empty key supports unauthenticated local endpoints.
+
+Any other model can use an external JSONL worker without adding its dependencies to the benchmark process:
+
+```bash
+srb run hf://owner/model \
+  --command-worker "python my_worker.py" \
+  --dataset data/subreddit_dynamic \
+  --output results/model
+```
+
+The worker first answers `{"type":"hello","protocol":1}` with its limits, modalities, batching support, and probability source (`native`, `self_reported`, or `none`). Prediction messages contain `state` and the canonical typed `questions`; result messages return choices, optional probability distributions, usage, timing, and forward counts. See `tests/support_worker.py` for the complete minimal protocol.
+
+Laya remains available through the same worker boundary:
 
 ```bash
 python -m pip install -e '.[laya]'
@@ -50,22 +88,31 @@ evaluate-subreddit-dynamic \
 
 The evaluation is resumable at prediction granularity. It runs every available text mode across both candidate representations, seen/unseen communities, random/semantic/hard negatives, and every configured `K`. The fixed sample contains up to ten test posts per community.
 
-Results contain:
+Results contain `run.json`, `predictions.jsonl`, `metrics.json`, and `metrics.csv`. Accuracy, its 95% bootstrap interval, macro community accuracy, latency, token usage, forward count, and cost are always reported. NLL, multiclass Brier, ECE-15, and AURC are reported only for models that return probabilities; label-only models are never assigned fabricated confidence.
 
-```text
-run.json
-predictions.jsonl
-metrics.json
-metrics.csv
+## Compare runs
+
+Compatible runs can be compared by benchmark slice and exported as JSON:
+
+```bash
+srb compare results/laya-smoke results/gliner-smoke \
+  --output results/smoke-comparison.json
 ```
 
-Metrics include accuracy with a 95% bootstrap interval, macro community accuracy, NLL, multiclass Brier score, ECE-15, AURC, amortized P50/P95 latency, input tokens, and local API cost. Laya's public probabilities are rounded to four decimals; the evaluator records their original sum and renormalizes them before calibration metrics.
+The command rejects different dataset builds, task matrices, sampled posts, prediction IDs, or metric slices. Calibration fields remain unavailable for label-only models.
+
+## Runtime notices
+
+- Supported Python versions are 3.11–3.13. Python 3.14 is excluded because current Torch/GLiNER releases warn that their TorchScript path is unsupported.
+- Set `HF_TOKEN` to remove the Hugging Face unauthenticated-download notice and receive higher rate limits.
+- GLiNER2 may report that its custom `extractor` configuration is loading through Transformers and that DeBERTa falls back from SDPA to eager attention. Both messages come from the upstream runtime; the pinned GLiNER smoke inference is verified with this fallback.
+- Runtime warnings are intentionally not suppressed globally. A new or changed warning should be treated as a compatibility signal.
 
 ## Reproducibility and provenance
 
 - Source titles and community metadata come from [TheShadow29/subreddit-classification-dataset](https://github.com/TheShadow29/subreddit-classification-dataset), whose repository is MIT-licensed. Reddit content remains subject to Reddit's terms and the rights of its authors.
-- Laya evaluation uses [`laya-mlx`](https://github.com/mizorewww/laya-mlx) and `aac6fef/laya-multilingual-mlx`, both distributed under Apache-2.0. Model weights and caches are downloaded locally and are not redistributed here.
-- Dataset rows, model revision, embedding revision, sampling seed, runtime version, environment, and candidate configuration are recorded in the generated build and run metadata.
+- The exact model and revision, adapter and worker protocol, probability provenance, runtime capabilities, environment, dataset build, candidate configuration, latency, and forward counts are recorded in run and prediction outputs.
+- Model weights and caches are downloaded by their optional runtimes and are not redistributed here.
 
 ## License and citation
 
