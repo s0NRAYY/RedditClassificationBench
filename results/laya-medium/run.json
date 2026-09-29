@@ -1,0 +1,95 @@
+{
+  "model": "convaiinnovations/laya",
+  "revision": "f2b4faf51023039425946074e2cf1361d2db11d5",
+  "adapter": {
+    "type": "capabilities",
+    "protocol": 1,
+    "probabilities": "native",
+    "max_questions": null,
+    "max_options": null,
+    "modalities": [
+      "text"
+    ],
+    "batching": true,
+    "runtime_model": "aac6fef/laya-multilingual-mlx",
+    "resolved_revision": "f2b4faf51023039425946074e2cf1361d2db11d5",
+    "revision_status": "pinned",
+    "reference_revision": "f2b4faf51023039425946074e2cf1361d2db11d5"
+  },
+  "registry_entry": {
+    "adapter": "laya",
+    "runtime_model": "aac6fef/laya-multilingual-mlx",
+    "revision": "f2b4faf51023039425946074e2cf1361d2db11d5",
+    "extra": "laya",
+    "probabilities": "native",
+    "max_questions": null,
+    "max_options": null
+  },
+  "model_runtime": {
+    "worker_command": [
+      "/tmp/srb-clean/bin/python",
+      "-m",
+      "model_worker",
+      "--adapter",
+      "laya",
+      "--model",
+      "aac6fef/laya-multilingual-mlx",
+      "--options",
+      "{\"probabilities\":\"native\",\"max_questions\":null,\"max_options\":null,\"revision\":\"f2b4faf51023039425946074e2cf1361d2db11d5\",\"dtype\":\"float16\",\"batch_size\":32,\"device\":\"gpu\",\"compile\":false,\"pad_to_multiple\":null}"
+    ],
+    "worker_protocol": 1,
+    "capabilities": {
+      "type": "capabilities",
+      "protocol": 1,
+      "probabilities": "native",
+      "max_questions": null,
+      "max_options": null,
+      "modalities": [
+        "text"
+      ],
+      "batching": true,
+      "runtime_model": "aac6fef/laya-multilingual-mlx",
+      "resolved_revision": "f2b4faf51023039425946074e2cf1361d2db11d5",
+      "revision_status": "pinned",
+      "reference_revision": "f2b4faf51023039425946074e2cf1361d2db11d5"
+    }
+  },
+  "python_version": "3.13.15",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "byteorder": "little",
+  "dataset_build": {
+    "rows_read": 1048855,
+    "rejected_missing_title": 0,
+    "rejected_duplicate_titles": 9077,
+    "title_posts": 1026755,
+    "eligible_posts": 874928,
+    "eligible_communities": 1242,
+    "negative_pools": 3726,
+    "evaluation_instances": 949206,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "benchmark_seed": 20260926,
+    "available_text_modes": [
+      "title"
+    ],
+    "source_mode": "title-only"
+  },
+  "text_modes": [
+    "title"
+  ],
+  "representations": [
+    "name-only",
+    "anonymous-id+description"
+  ],
+  "difficulties": [
+    "random",
+    "semantic",
+    "hard"
+  ],
+  "candidate_counts": [
+    4,
+    16,
+    64
+  ],
+  "selected_posts": 2484
+}

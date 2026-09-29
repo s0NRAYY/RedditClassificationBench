@@ -111,8 +111,8 @@ Results contain `run.json`, `predictions.jsonl`, `metrics.json`, and `metrics.cs
 Compatible runs can be compared by benchmark slice and exported as JSON:
 
 ```bash
-srb compare results/laya-smoke results/gliner-smoke \
-  --output results/smoke-comparison.json
+srb compare results/jev-medium results/laya-medium \
+  --output results/medium-comparison.json
 ```
 
 The command rejects different dataset builds, task matrices, sampled posts, prediction IDs, or metric slices. Calibration fields remain unavailable for label-only models.
