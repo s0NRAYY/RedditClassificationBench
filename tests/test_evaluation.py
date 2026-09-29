@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 import evaluation
 from evaluation import evaluate
@@ -42,7 +43,11 @@ class FakeAdapter:
         pass
 
 
-def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
+class SmallAdapter(FakeAdapter):
+    capabilities = {**FakeAdapter.capabilities, "max_options": 2}
+
+
+def _prepare(tmp_path, monkeypatch, adapter, candidate_counts="[2]"):
     dataset = tmp_path / "dataset"
     communities = [
         {
@@ -103,8 +108,8 @@ def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
 
     task = tmp_path / "task.yaml"
     task.write_text(
-        """benchmark_seed: 7
-candidate_counts: [2]
+        f"""benchmark_seed: 7
+candidate_counts: {candidate_counts}
 difficulties: [random, semantic, hard]
 """
     )
@@ -135,9 +140,14 @@ instruction: Select one.
     monkeypatch.setattr(
         evaluation,
         "_build_adapter",
-        lambda args, config: (FakeAdapter(), "fake", {}),
+        lambda args, config: (adapter, "fake", {}),
     )
 
+    return args, output
+
+
+def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
+    args, output = _prepare(tmp_path, monkeypatch, FakeAdapter())
     metrics = evaluate(args)
     first_count = len((output / "predictions.jsonl").read_text().splitlines())
     resumed_metrics = evaluate(args)
@@ -148,3 +158,21 @@ instruction: Select one.
     assert len(metrics) == 24
     assert resumed_metrics == metrics
     assert all(row["api_cost_usd"] == 0 for row in metrics)
+
+
+def test_candidate_counts_above_worker_limit_are_skipped_and_recorded(tmp_path, monkeypatch):
+    args, output = _prepare(tmp_path, monkeypatch, SmallAdapter(), "[2, 4]")
+    evaluate(args)
+    run = json.loads((output / "run.json").read_text())
+    rows = [json.loads(line) for line in (output / "predictions.jsonl").read_text().splitlines()]
+
+    assert run["candidate_counts"] == [2]
+    assert run["skipped_candidate_counts"] == [4]
+    assert {row["k"] for row in rows} == {2}
+
+
+def test_worker_limit_below_every_candidate_count_fails(tmp_path, monkeypatch):
+    args, output = _prepare(tmp_path, monkeypatch, SmallAdapter(), "[4]")
+    with pytest.raises(ValueError, match="at most 2 options"):
+        evaluate(args)
+    assert not (output / "predictions.jsonl").exists()

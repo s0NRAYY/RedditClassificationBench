@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `medium` task preset (`tasks/subreddit_dynamic/medium.yaml`): 2 posts per community, all difficulties, `K` ∈ {4, 16, 64}.
+- Task presets may set `posts_per_community` (CLI overrides preset, preset overrides model config).
+- Candidate counts above a worker's declared `max_options` are skipped and recorded as `skipped_candidate_counts` in `run.json` instead of failing mid-run.
+
 ## v0.3.0 — Public alpha
 
 Positioning: **public alpha — contributors and benchmark feedback wanted**. This is not yet a finished universal benchmark.

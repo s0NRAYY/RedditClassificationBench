@@ -255,9 +255,14 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
         raise ValueError(f"Dataset does not provide text modes: {sorted(unavailable)}")
 
     instances = _load_rows(dataset_dir / "manifests" / "instances.parquet")
+    posts_per_community = int(
+        args.posts_per_community
+        or task_config.get("posts_per_community")
+        or model_config["posts_per_community"]
+    )
     selected = _select_posts(
         instances,
-        args.posts_per_community or int(model_config["posts_per_community"]),
+        posts_per_community,
         int(task_config["benchmark_seed"]),
     )
     selected_ids = {row["post_id"] for row in selected}
@@ -275,6 +280,22 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
     requested_model = getattr(args, "model", None) or model_config["model"]
     console.print(f"[bold cyan]Loading model[/] [white]{requested_model}[/]...")
     adapter, model, registry = _build_adapter(args, model_config)
+    max_options = adapter.capabilities.get("max_options")
+    candidate_counts = [
+        k for k in task_config["candidate_counts"] if max_options is None or k <= max_options
+    ]
+    skipped_counts = [k for k in task_config["candidate_counts"] if k not in candidate_counts]
+    if not candidate_counts:
+        adapter.close()
+        raise ValueError(
+            f"Worker supports at most {max_options} options; "
+            f"every requested candidate count {task_config['candidate_counts']} exceeds it"
+        )
+    if skipped_counts:
+        console.print(
+            f"[yellow]Skipping candidate counts {skipped_counts}: "
+            f"worker supports at most {max_options} options[/]"
+        )
 
     run = {
         "model": model,
@@ -293,9 +314,11 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
         "text_modes": text_modes,
         "representations": model_config["representations"],
         "difficulties": task_config["difficulties"],
-        "candidate_counts": task_config["candidate_counts"],
+        "candidate_counts": candidate_counts,
         "selected_posts": len(selected),
     }
+    if skipped_counts:
+        run["skipped_candidate_counts"] = skipped_counts
     run_path = output_dir / "run.json"
     if run_path.exists() and json.loads(run_path.read_text()) != run:
         raise ValueError("Output directory belongs to a different evaluation configuration")
@@ -311,18 +334,18 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
         * len(text_modes)
         * len(model_config["representations"])
         * len(task_config["difficulties"])
-        * len(task_config["candidate_counts"])
+        * len(candidate_counts)
     )
     configuration = (
         ("Model", model),
         ("Dataset", str(dataset_dir)),
         ("Task config", str(args.task_config)),
         ("Output", str(output_dir)),
-        ("Posts / community", str(args.posts_per_community or model_config["posts_per_community"])),
+        ("Posts / community", str(posts_per_community)),
         ("Text modes", ", ".join(text_modes)),
         ("Representations", ", ".join(model_config["representations"])),
         ("Difficulties", ", ".join(task_config["difficulties"])),
-        ("Candidate counts", ", ".join(map(str, task_config["candidate_counts"]))),
+        ("Candidate counts", ", ".join(map(str, candidate_counts))),
         ("Selected posts", str(len(selected))),
         ("Predictions", f"{len(completed)} completed / {expected_predictions} total"),
     )
@@ -378,7 +401,7 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
                     text_mode,
                     model_config["representations"],
                     task_config["difficulties"],
-                    task_config["candidate_counts"],
+                    candidate_counts,
                     model_config["instruction"],
                 )
                 metadata = {

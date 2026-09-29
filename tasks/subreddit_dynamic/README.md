@@ -24,6 +24,18 @@ Seen vectors are means of embeddings from seen-train `title+selftext` only. Unse
 
 For candidate count `K`, take the target and the first `K-1` negatives. Their display permutation is derived from `(benchmark_seed, post_id, difficulty, K)`; candidate sets are nested even though display order may change.
 
+## Presets
+
+All presets share `benchmark_seed: 20260926`, so the same posts and candidate sets are selected for every model. Counts below are for the title-only build (1,242 communities, one text mode, two representations).
+
+| Preset | Posts / community | Difficulties | `K` | Posts | Predictions | Laya, M3 Max |
+|---|---|---|---|---:|---:|---:|
+| `smoke.yaml` | 1 (via CLI) | random | 2 | 1,242 | 2,484 | 22 s |
+| `medium.yaml` | 2 | random, semantic, hard | 4, 16, 64 | 2,484 | 44,712 | 8 m 8 s |
+| `task.yaml` | 10 (model config) | random, semantic, hard | 4, 8, 16, 32, 64 | 12,384 | 371,520 | not re-timed |
+
+`medium` is the comparison preset: it keeps every track, difficulty, and representation and the smallest, middle, and largest `K`. Laya timing: Python 3.13.15, `laya-mlx` 0.2.0, MLX float16; slower runtimes scale roughly with predictions and `K`.
+
 ## Stored contracts
 
 `posts.parquet`: `post_id`, `subreddit`, `title`, `selftext`, `created_utc`, `split`.

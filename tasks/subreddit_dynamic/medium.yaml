@@ -1,0 +1,7 @@
+benchmark_seed: 20260926
+posts_per_community: 2
+candidate_counts: [4, 16, 64]
+difficulties:
+  - random
+  - semantic
+  - hard
