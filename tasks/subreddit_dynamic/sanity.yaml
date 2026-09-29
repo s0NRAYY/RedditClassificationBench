@@ -1,0 +1,53 @@
+# Hand-written, deliberately unambiguous routing examples for `srb sanity`.
+# A working adapter should get nearly all of them right in both representations;
+# failures point at the adapter or prompt format before they point at the model.
+# The target position varies so that a position bias or label-mapping bug shows up.
+min_accuracy: 0.8
+communities:
+  r/Breadit: Baking bread at home. Sourdough starters, recipes, crumb shots and troubleshooting dense or flat loaves.
+  r/buildapc: Planning and building your own desktop PC. Part lists, compatibility, power supplies and graphics cards.
+  r/nba: News, highlights and discussion about the National Basketball Association, its teams and players.
+  r/Aquariums: Keeping freshwater and saltwater fish tanks. Water chemistry, cycling, filtration and fish health.
+  r/gardening: Growing plants, vegetables and flowers at home. Soil, watering, pests and plant diseases.
+  r/personalfinance: Budgeting, saving, debt repayment, retirement accounts, credit cards and taxes.
+  r/learnpython: Help for people learning the Python programming language. Beginner questions and code debugging.
+  r/MechanicalKeyboards: Mechanical keyboards, switches, keycaps, lubing, stabilizers and custom builds.
+  r/Cats: Pictures, stories and advice about pet cats and their behaviour.
+  r/running: Running for fitness and racing. Training plans, marathons, shoes and injuries.
+  r/photography: Taking photographs. Cameras, lenses, exposure, composition and editing.
+  r/AskHistorians: In-depth answers to questions about history from medieval to modern times.
+  r/Guitar: Playing the guitar. Chords, technique, gear, amps and learning songs.
+  r/cycling: Riding bicycles. Road bikes, commuting, bike maintenance and group rides.
+  r/SkincareAddiction: Skincare routines, acne treatment, moisturizers, sunscreen and product advice.
+  r/boardgames: Tabletop and board games. Recommendations, rules questions and game night reports.
+examples:
+  - title: My sourdough starter doubles but the loaf still comes out dense. Is my hydration too high?
+    target: r/Breadit
+    candidates: [r/Breadit, r/nba, r/buildapc, r/Cats]
+  - title: Will a 750W PSU be enough for an RTX 4080 and a Ryzen 7 7800X3D?
+    target: r/buildapc
+    candidates: [r/gardening, r/buildapc, r/running, r/AskHistorians]
+  - title: Ammonia spike in my new 20 gallon tank and the fish are gasping at the surface
+    target: r/Aquariums
+    candidates: [r/photography, r/Guitar, r/Aquariums, r/personalfinance]
+  - title: Should I pay off my 22% APR credit card before maxing out my Roth IRA?
+    target: r/personalfinance
+    candidates: [r/Cats, r/boardgames, r/cycling, r/personalfinance]
+  - title: Why does my list comprehension return a list of None values?
+    target: r/learnpython
+    candidates: [r/learnpython, r/SkincareAddiction, r/nba, r/gardening]
+  - title: Tomato leaves turning yellow from the bottom up. Am I overwatering?
+    target: r/gardening
+    candidates: [r/MechanicalKeyboards, r/gardening, r/AskHistorians, r/Breadit]
+  - title: Lubed my switches and now the spacebar rattles. How do I fix the stabilizer?
+    target: r/MechanicalKeyboards
+    candidates: [r/running, r/Cats, r/MechanicalKeyboards, r/photography]
+  - title: How did medieval peasants actually pay taxes to their lords?
+    target: r/AskHistorians
+    candidates: [r/Guitar, r/cycling, r/buildapc, r/AskHistorians]
+  - title: How should I train for a sub-3 hour marathon on 50 miles a week?
+    target: r/running
+    candidates: [r/nba, r/Breadit, r/photography, r/Guitar, r/boardgames, r/Aquariums, r/learnpython, r/gardening, r/SkincareAddiction, r/personalfinance, r/running, r/Cats, r/cycling, r/buildapc, r/AskHistorians, r/MechanicalKeyboards]
+  - title: My cat keeps knocking glasses off the table at 3am. How do I stop her?
+    target: r/Cats
+    candidates: [r/boardgames, r/cycling, r/learnpython, r/Guitar, r/Breadit, r/Cats, r/nba, r/photography, r/running, r/Aquariums, r/AskHistorians, r/SkincareAddiction, r/buildapc, r/gardening, r/MechanicalKeyboards, r/personalfinance]

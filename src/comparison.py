@@ -11,7 +11,6 @@ COMPATIBILITY_FIELDS = (
     "text_modes",
     "representations",
     "difficulties",
-    "candidate_counts",
     "selected_posts",
 )
 SLICE_FIELDS = (
@@ -39,22 +38,16 @@ def compare_runs(paths: list[str | Path]) -> list[dict]:
         runs.append((path, run, metrics, predictions))
 
     _, reference, reference_metrics, reference_predictions = runs[0]
-    reference_ids = {row["prediction_id"] for row in reference_predictions}
-    reference_posts = {row["post_id"] for row in reference_predictions}
-    reference_slices = {
-        tuple(row[field] for field in SLICE_FIELDS)
-        for row in reference_metrics
-    }
     for path, run, metrics, predictions in runs[1:]:
         for field in COMPATIBILITY_FIELDS:
             if run.get(field) != reference.get(field):
                 raise ValueError(f"Incompatible {field}: {runs[0][0]} vs {path}")
-        ids = {row["prediction_id"] for row in predictions}
-        posts = {row["post_id"] for row in predictions}
-        if posts != reference_posts or ids != reference_ids:
+        if _requested_counts(run) != _requested_counts(reference):
+            raise ValueError(f"Incompatible candidate_counts: {runs[0][0]} vs {path}")
+        shared = set(run["candidate_counts"]) & set(reference["candidate_counts"])
+        if _ids(predictions, shared) != _ids(reference_predictions, shared):
             raise ValueError(f"Runs contain different sampled predictions: {path}")
-        slices = {tuple(row[field] for field in SLICE_FIELDS) for row in metrics}
-        if slices != reference_slices:
+        if _slices(metrics, shared) != _slices(reference_metrics, shared):
             raise ValueError(f"Runs contain different metric slices: {path}")
 
     output = []
@@ -64,3 +57,16 @@ def compare_runs(paths: list[str | Path]) -> list[dict]:
         for metric in metrics:
             output.append({"system": system, "result_dir": str(path), **metric})
     return output
+
+
+def _requested_counts(run: dict) -> list[int]:
+    """Candidate counts asked for, including those a worker's declared limits forced to skip."""
+    return sorted(run["candidate_counts"] + run.get("skipped_candidate_counts", []))
+
+
+def _ids(predictions: list[dict], counts: set[int]) -> set[str]:
+    return {row["prediction_id"] for row in predictions if row["k"] in counts}
+
+
+def _slices(metrics: list[dict], counts: set[int]) -> set[tuple]:
+    return {tuple(row[field] for field in SLICE_FIELDS) for row in metrics if row["k"] in counts}

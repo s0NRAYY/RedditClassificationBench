@@ -156,10 +156,27 @@ def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
 
     assert first_count == 48
     assert second_count == first_count
-    assert len(metrics) == 24
+    assert len(metrics) == 36
+    assert {row["community_track"] for row in metrics} == {"seen", "unseen", "all"}
     assert resumed_metrics == metrics
     assert all(row["api_cost_usd"] == 0 for row in metrics)
     assert json.loads((output / "run.json").read_text())["served_model"] == "fake-1"
+
+
+def test_sanity_maps_choices_back_to_candidates(tmp_path, monkeypatch):
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        "representations: [name-only, anonymous-id+description]\ninstruction: Select one.\n"
+    )
+    monkeypatch.setattr(evaluation, "_build_adapter", lambda args, config: (FakeAdapter(), "fake", {}))
+    examples = Path(__file__).parents[1] / "tasks/subreddit_dynamic/sanity.yaml"
+    rows = evaluation.sanity(argparse.Namespace(config=str(config), examples=str(examples)))
+    spec = evaluation.yaml.safe_load(examples.read_text())
+
+    # FakeAdapter always picks the first option, so exactly the examples whose target is listed first are correct.
+    expected = [example["candidates"][0] == example["target"] for example in spec["examples"] for _ in range(2)]
+    assert [row["correct"] for row in rows] == expected
+    assert {row["representation"] for row in rows} == {"name-only", "anonymous-id+description"}
 
 
 def test_candidate_counts_above_worker_limit_are_skipped_and_recorded(tmp_path, monkeypatch):

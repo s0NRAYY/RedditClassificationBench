@@ -52,6 +52,21 @@ def _select_posts(instances: list[dict], per_community: int, seed: int) -> list[
     return sorted(selected, key=lambda row: (row["community_track"], row["target"], row["post_id"]))
 
 
+def _criteria(
+    representation: str, candidates: list[str], community_by_id: dict[str, dict]
+) -> tuple[list[str], list[str] | dict[str, str]]:
+    if representation == "name-only":
+        labels = [community_by_id[candidate]["name"] for candidate in candidates]
+        return labels, labels
+    if representation == "anonymous-id+description":
+        labels = [f"option_{index:02d}" for index in range(1, len(candidates) + 1)]
+        return labels, {
+            label: community_by_id[candidate]["public_description"]
+            for label, candidate in zip(labels, candidates, strict=True)
+        }
+    raise ValueError(f"Unknown candidate representation: {representation}")
+
+
 def _questions_for_post(
     post: dict,
     track: str,
@@ -73,17 +88,7 @@ def _questions_for_post(
             candidates = candidates_for_k(target, pool, k, shuffle_seeds[difficulty])
             for representation in representations:
                 qid = f"{text_mode}|{representation}|{track}|{difficulty}|{k}"
-                if representation == "name-only":
-                    labels = [community_by_id[candidate]["name"] for candidate in candidates]
-                    criteria: list[str] | dict[str, str] = labels
-                elif representation == "anonymous-id+description":
-                    labels = [f"option_{index:02d}" for index in range(1, k + 1)]
-                    criteria = {
-                        label: community_by_id[candidate]["public_description"]
-                        for label, candidate in zip(labels, candidates, strict=True)
-                    }
-                else:
-                    raise ValueError(f"Unknown candidate representation: {representation}")
+                labels, criteria = _criteria(representation, candidates, community_by_id)
                 questions[qid] = {
                     "type": "choice",
                     "instructions": instruction,
@@ -443,6 +448,53 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
     )
     write_metrics(metrics, output_dir)
     return metrics
+
+
+def sanity(args: argparse.Namespace) -> list[dict]:
+    """Run hand-written, unambiguous examples through the benchmark's exact question format."""
+    model_config = yaml.safe_load(Path(args.config).read_text())
+    spec = yaml.safe_load(Path(args.examples).read_text())
+    communities = {
+        name: {"name": name, "public_description": description}
+        for name, description in spec["communities"].items()
+    }
+    adapter, _, _ = _build_adapter(args, model_config)
+    rows = []
+    try:
+        for example in spec["examples"]:
+            candidates = example["candidates"]
+            for representation in model_config["representations"]:
+                labels, criteria = _criteria(representation, candidates, communities)
+                result, _ = adapter.predict(
+                    example["title"],
+                    {
+                        "sanity": {
+                            "type": "choice",
+                            "instructions": model_config["instruction"],
+                            "criteria": criteria,
+                        }
+                    },
+                )
+                answer = result["answers"]["sanity"]
+                prediction = dict(zip(labels, candidates, strict=True))[answer["choice"]]
+                probabilities = answer.get("probabilities")
+                target_label = labels[candidates.index(example["target"])]
+                rows.append(
+                    {
+                        "representation": representation,
+                        "k": len(candidates),
+                        "title": example["title"],
+                        "target": example["target"],
+                        "prediction": prediction,
+                        "correct": prediction == example["target"],
+                        "true_probability": (
+                            probabilities.get(target_label) if probabilities else None
+                        ),
+                    }
+                )
+    finally:
+        adapter.close()
+    return rows
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

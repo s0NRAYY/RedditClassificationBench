@@ -18,6 +18,7 @@ from credentials import (
     model_credentials,
     save_model_credentials,
 )
+from metrics import HEADLINE_K, headline
 from model_registry import MODEL_REGISTRY, SOURCE, doctor, resolve_model
 
 console = Console()
@@ -158,6 +159,11 @@ def _run(args: argparse.Namespace) -> int:
     details.add_row("Metrics", str(output / "metrics.json"))
     details.add_row("Predictions", str(output / "predictions.jsonl"))
     details.add_row("Run metadata", str(output / "run.json"))
+    for row in headline(metrics):
+        details.add_row(
+            f"Headline k={row['k']}",
+            f"{row['accuracy']:.3f} [{row['accuracy_ci95_low']:.3f}, {row['accuracy_ci95_high']:.3f}]",
+        )
     console.print(
         Panel(
             details,
@@ -167,12 +173,63 @@ def _run(args: argparse.Namespace) -> int:
     )
     return 0
 
+
+def _sanity(args: argparse.Namespace) -> int:
+    _prepare_http_credentials(args)
+    rows = evaluation.sanity(args)
+    minimum = float(evaluation.yaml.safe_load(Path(args.examples).read_text())["min_accuracy"])
+    table = Table(title=f"Sanity check: {args.model}", title_style="bold cyan", border_style="bright_black")
+    for name in ("Representation", "Correct", "Accuracy", "Status"):
+        table.add_column(name)
+    failed = False
+    for representation in dict.fromkeys(row["representation"] for row in rows):
+        group = [row for row in rows if row["representation"] == representation]
+        accuracy = sum(row["correct"] for row in group) / len(group)
+        ok = accuracy >= minimum
+        failed |= not ok
+        table.add_row(
+            representation,
+            f"{sum(row['correct'] for row in group)}/{len(group)}",
+            f"{accuracy:.2f}",
+            "[green]ok[/]" if ok else f"[red]below {minimum:.2f}[/]",
+        )
+    console.print(table)
+    for row in rows:
+        if not row["correct"]:
+            console.print(
+                f"[yellow]✗[/] {row['representation']} k={row['k']}: {row['title']} "
+                f"→ {row['prediction']} (expected {row['target']}, p={_metric(row['true_probability'])})"
+            )
+    if failed:
+        console.print("[red]Adapter or prompt format is suspect; do not publish this model's results yet.[/]")
+    return 1 if failed else 0
+
+
 def _metric(value: float | None) -> str:
     return "—" if value is None else f"{value:.3f}"
 
 
 def _compare(args: argparse.Namespace) -> int:
     rows = compare_runs(args.results)
+    summary = Table(
+        title="Headline: hard negatives, descriptions only, all communities",
+        title_style="bold cyan",
+        border_style="bright_black",
+    )
+    summary.add_column("System")
+    for k in HEADLINE_K:
+        summary.add_column(f"k={k}", justify="right")
+    systems = dict.fromkeys(row["system"] for row in rows)
+    for system in systems:
+        values = {row["k"]: row for row in headline([r for r in rows if r["system"] == system])}
+        summary.add_row(
+            system,
+            *(
+                f"{values[k]['accuracy']:.3f}" if k in values else "unsupported"
+                for k in HEADLINE_K
+            ),
+        )
+    console.print(summary)
     table = Table(
         title="Benchmark Comparison",
         title_style="bold cyan",
@@ -280,6 +337,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     run.add_argument("--endpoint")
     run.add_argument("--command-worker")
     run.set_defaults(handler=_run)
+
+    check = subparsers.add_parser(
+        "sanity",
+        help="Check a model adapter on hand-written, unambiguous examples",
+    )
+    check.add_argument("model")
+    check.add_argument("--config", default="configs/default.yaml")
+    check.add_argument("--examples", default="tasks/subreddit_dynamic/sanity.yaml")
+    check.add_argument("--adapter")
+    check.add_argument("--endpoint")
+    check.add_argument("--command-worker")
+    check.set_defaults(handler=_sanity)
     return parser.parse_args(argv)
 
 

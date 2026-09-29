@@ -15,6 +15,18 @@ _GROUP_FIELDS = (
     "difficulty",
     "k",
 )
+# Headline slice: zero-shot models have no training exposure to either track, so both are pooled
+# ("all"); descriptions without names test understanding rather than subreddit-name recall.
+HEADLINE = {"community_track": "all", "difficulty": "hard", "representation": "anonymous-id+description"}
+HEADLINE_K = (16, 64)
+
+
+def headline(metrics: list[dict]) -> list[dict]:
+    return [
+        row
+        for row in metrics
+        if row["k"] in HEADLINE_K and all(row[field] == value for field, value in HEADLINE.items())
+    ]
 
 
 def _ece(rows: list[dict], bins: int = 15) -> float:
@@ -54,7 +66,9 @@ def _bootstrap_accuracy(rows: list[dict], samples: int, seed: int) -> tuple[floa
 def aggregate(rows: list[dict], *, bootstrap_samples: int = 1000, seed: int = 0) -> list[dict]:
     grouped: dict[tuple, list[dict]] = defaultdict(list)
     for row in rows:
-        grouped[tuple(row[field] for field in _GROUP_FIELDS)].append(row)
+        key = tuple(row[field] for field in _GROUP_FIELDS)
+        grouped[key].append(row)
+        grouped[key[:2] + ("all",) + key[3:]].append(row)
 
     output = []
     for group_index, (key, group) in enumerate(sorted(grouped.items())):

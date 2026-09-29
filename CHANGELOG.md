@@ -7,6 +7,10 @@
 - Candidate counts above a worker's declared `max_options` are skipped and recorded as `skipped_candidate_counts` in `run.json` instead of failing mid-run.
 - Jev (`typesafe/jev-1.13`, `~typesafe/jev-latest`) via OpenRouter's System One endpoint; hosted-API registry entries may omit a weights revision.
 - HTTP runs record the server-reported model version as `served_model` in `run.json`, retry transient 429/5xx with backoff, and record provider-reported cost as `api_cost_usd`.
+- `srb sanity MODEL`: hand-written, unambiguous examples in the exact benchmark question format to catch adapter bugs before a run. It caught the GLiNER2 adapter folding label descriptions into label names (description-mode accuracy on obvious examples 0.5 → 1.0 after using GLiNER2's native label descriptions); earlier GLiNER description results are invalid.
+- Metrics add a pooled `community_track: all`; the headline metric (hard, descriptions only, all tracks, K = 16/64) is printed by `srb run` and first in `srb compare`.
+- `srb compare` accepts runs whose worker limits skipped some `K`, comparing the shared counts.
+- Label-ambiguity estimate for the headline slice (`tasks/subreddit_dynamic/ambiguity.md`, LLM-annotated).
 
 ## v0.3.0 — Public alpha
 

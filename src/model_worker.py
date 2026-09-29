@@ -241,15 +241,15 @@ class GLiNERBackend:
 
     def predict(self, state: str, questions: dict) -> dict:
         schema = {}
-        reverse = {}
         for qid, question in questions.items():
             labels, descriptions = _labels(question)
-            rendered = [label if descriptions[label] == label else f"{label}: {descriptions[label]}" for label in labels]
-            schema[qid] = rendered
-            reverse[qid] = dict(zip(rendered, labels, strict=True))
+            has_descriptions = descriptions != {label: label for label in labels}
+            # GLiNER2 encodes label descriptions natively ([DESCRIPTION] tokens); folding them into
+            # label names instead drops sanity-check accuracy on descriptions from 1.0-level to 0.5.
+            schema[qid] = {"labels": descriptions if has_descriptions else labels}
         selected = self.model.classify_text(state, schema)
-        answers = {qid: {"choice": reverse[qid][selected[qid]]} for qid in questions}
-        return {"answers": answers, "usage": {"forward_count": 1}}
+        answers = {qid: {"choice": selected[qid]} for qid in questions}
+        return _normalize_result({"answers": answers, "usage": {"forward_count": 1}}, questions)
 
 
 BACKENDS = {

@@ -36,6 +36,16 @@ All presets share `benchmark_seed: 20260926`, so the same posts and candidate se
 
 `medium` is the comparison preset: it keeps every track, difficulty, and representation and the smallest, middle, and largest `K`. Laya timing: Python 3.13.15, `laya-mlx` 0.2.0, MLX float16; slower runtimes scale roughly with predictions and `K`.
 
+## Headline metric and tracks
+
+Metrics are reported per `community_track` (`seen`, `unseen`) and pooled as `all`. For zero-shot models neither track was seen in training, so the split mainly reflects how hard negatives were mined (seen-train content vs public descriptions), not generalization; use `all` unless a model was trained on the seen-train split.
+
+The headline number is accuracy on `all` tracks, `hard` negatives, `anonymous-id+description`, at K = 16 and 64. Hiding subreddit names separates understanding what a community is about from recognising its name, and hard negatives are where models differ. `srb run` prints it at the end of a run and `srb compare` puts it first. See `ambiguity.md` for how much of this slice is answerable from a title.
+
+## Adapter sanity check
+
+`srb sanity MODEL` sends ten hand-written, unambiguous posts (`sanity.yaml`) through the benchmark's exact question format in both representations. A model below 0.8 accuracy there most likely has an adapter or prompt-format problem; do not publish its benchmark results until that is resolved.
+
 ## Stored contracts
 
 `posts.parquet`: `post_id`, `subreddit`, `title`, `selftext`, `created_utc`, `split`.

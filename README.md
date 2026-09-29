@@ -102,6 +102,8 @@ The evaluation is resumable at prediction granularity. It runs every available t
 
 Choose a matrix with `--task-config` (see `tasks/subreddit_dynamic/README.md` for sizes and timings): `smoke.yaml` checks plumbing, `medium.yaml` is the recommended comparison preset, and the default `task.yaml` is the full matrix. Posts per community come from `--posts-per-community`, then the preset, then the model config (ten by default). If a worker declares `max_options` below a requested `K`, that `K` is skipped with a warning and listed as `skipped_candidate_counts` in `run.json`; candidates are never truncated.
 
+Before a full run, check the adapter with `srb sanity MODEL` (ten unambiguous hand-written posts; below 0.8 means the adapter or prompt format is suspect). The headline number is accuracy on hard negatives with descriptions only (names hidden), pooled over community tracks, at `K` = 16 and 64; see `tasks/subreddit_dynamic/README.md` and `tasks/subreddit_dynamic/ambiguity.md`.
+
 Results contain `run.json`, `predictions.jsonl`, `metrics.json`, and `metrics.csv`. Accuracy, its 95% bootstrap interval, macro community accuracy, latency, token usage, forward count, and cost are always reported. NLL, multiclass Brier, ECE-15, and AURC are reported only for models that return probabilities; label-only models are never assigned fabricated confidence.
 
 ## Compare runs
