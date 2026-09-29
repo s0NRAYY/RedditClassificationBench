@@ -97,11 +97,12 @@ class CommandAdapter:
         result["probability_source"] = self.capabilities["probabilities"]
         return result, float(response.get("timing_ms", elapsed_ms))
 
-    def warmup(self) -> None:
-        self.predict(
+    def warmup(self) -> dict:
+        result, _ = self.predict(
             "A short benchmark warmup post.",
             {"warmup": {"type": "choice", "instructions": "Select one.", "criteria": ["r/example", "r/other"]}},
         )
+        return result
 
     def close(self) -> None:
         process = getattr(self, "process", None)

@@ -25,7 +25,8 @@ class FakeAdapter:
     metadata = {"fake": True}
 
     def warmup(self):
-        pass
+        return {"served_model": "fake-1"}
+
     def predict(self, state, questions):
         answers = {}
         tokens = 0
@@ -158,6 +159,7 @@ def test_full_matrix_metrics_and_resume(tmp_path, monkeypatch):
     assert len(metrics) == 24
     assert resumed_metrics == metrics
     assert all(row["api_cost_usd"] == 0 for row in metrics)
+    assert json.loads((output / "run.json").read_text())["served_model"] == "fake-1"
 
 
 def test_candidate_counts_above_worker_limit_are_skipped_and_recorded(tmp_path, monkeypatch):

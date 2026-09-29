@@ -7,8 +7,8 @@ import json
 import os
 import sys
 from pathlib import Path
-from time import perf_counter
-from urllib.error import HTTPError
+from time import perf_counter, sleep
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -90,13 +90,29 @@ class HttpBackend:
         if token:
             headers["Authorization"] = f"Bearer {token}"
         request = Request(self.url, json.dumps(payload).encode(), headers=headers, method="POST")
-        try:
-            with urlopen(request, timeout=float(self.options.get("timeout", 120))) as response:
-                result = json.load(response)
-        except HTTPError as error:
-            detail = error.read().decode(errors="replace")
-            raise RuntimeError(f"HTTP {error.code} from {self.url}: {detail}") from error
-        return _normalize_result(result, questions)
+        attempts = int(self.options.get("attempts", 6))
+        for attempt in range(attempts):
+            try:
+                with urlopen(request, timeout=float(self.options.get("timeout", 120))) as response:
+                    result = json.load(response)
+                break
+            except HTTPError as error:
+                detail = error.read().decode(errors="replace")
+                if (error.code == 429 or error.code >= 500) and attempt < attempts - 1:
+                    sleep(min(2**attempt, 30))
+                    continue
+                raise RuntimeError(f"HTTP {error.code} from {self.url}: {detail}") from error
+            except (URLError, TimeoutError):
+                if attempt == attempts - 1:
+                    raise
+                sleep(min(2**attempt, 30))
+        usage = result.get("usage") or {}
+        if "cost" in usage:
+            usage.setdefault("api_cost_usd", usage["cost"])
+        normalized = _normalize_result(result, questions)
+        if result.get("model"):
+            normalized["served_model"] = result["model"]
+        return normalized
 
 
 class LayaBackend:

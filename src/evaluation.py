@@ -297,6 +297,9 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
             f"worker supports at most {max_options} options[/]"
         )
 
+    console.print("[cyan]◌[/] Warming up model...")
+    served_model = adapter.warmup().get("served_model")
+
     run = {
         "model": model,
         "revision": getattr(
@@ -319,6 +322,8 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
     }
     if skipped_counts:
         run["skipped_candidate_counts"] = skipped_counts
+    if served_model:
+        run["served_model"] = served_model
     run_path = output_dir / "run.json"
     if run_path.exists() and json.loads(run_path.read_text()) != run:
         raise ValueError("Output directory belongs to a different evaluation configuration")
@@ -362,9 +367,6 @@ def evaluate(args: argparse.Namespace) -> list[dict]:
             padding=(1, 2),
         )
     )
-
-    console.print("[cyan]◌[/] Warming up model...")
-    adapter.warmup()
 
     written = 0
     progress = Progress(

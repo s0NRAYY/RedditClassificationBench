@@ -5,6 +5,8 @@
 - `medium` task preset (`tasks/subreddit_dynamic/medium.yaml`): 2 posts per community, all difficulties, `K` ∈ {4, 16, 64}.
 - Task presets may set `posts_per_community` (CLI overrides preset, preset overrides model config).
 - Candidate counts above a worker's declared `max_options` are skipped and recorded as `skipped_candidate_counts` in `run.json` instead of failing mid-run.
+- Jev (`typesafe/jev-1.13`, `~typesafe/jev-latest`) via OpenRouter's System One endpoint; hosted-API registry entries may omit a weights revision.
+- HTTP runs record the server-reported model version as `served_model` in `run.json`, retry transient 429/5xx with backoff, and record provider-reported cost as `api_cost_usd`.
 
 ## v0.3.0 — Public alpha
 

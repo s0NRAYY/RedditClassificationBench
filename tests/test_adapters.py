@@ -2,6 +2,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from urllib.error import HTTPError
 
 import pytest
 
@@ -73,8 +74,11 @@ def test_registry_declares_runtime_and_probability_contracts():
     for model, entry in MODEL_REGISTRY.items():
         assert entry["adapter"]
         assert entry["probabilities"] in {"native", "self_reported", "none"}
-        assert len(entry["revision"]) == 40
-        int(entry["revision"], 16)
+        if entry["revision"] is None:
+            assert entry.get("requires_endpoint"), f"{model}: only hosted APIs may omit a revision"
+        else:
+            assert len(entry["revision"]) == 40
+            int(entry["revision"], 16)
         checks = doctor(model, "http://localhost:8000")
         assert checks[0] == ("registry", True, entry["adapter"])
 
@@ -105,11 +109,13 @@ def test_transformers_predict_maps_candidate_aligned_probabilities():
 
 
 
-def test_http_backend_sends_systemone_choice_criteria_as_object(monkeypatch):
-    captured = {}
+def test_http_backend_retries_and_reports_cost_and_served_model(monkeypatch):
+    captured = []
 
     def urlopen(request, timeout):
-        captured.update(json.loads(request.data))
+        captured.append(json.loads(request.data))
+        if len(captured) == 1:
+            raise HTTPError(request.full_url, 503, "busy", {}, io.BytesIO(b"busy"))
         return io.BytesIO(
             json.dumps(
                 {
@@ -118,13 +124,16 @@ def test_http_backend_sends_systemone_choice_criteria_as_object(monkeypatch):
                             "choice": "b",
                             "probabilities": {"a": 0.25, "b": 0.75},
                         }
-                    }
+                    },
+                    "model": "typesafe/jev-1.13-20260917",
+                    "usage": {"cost": 0.00002, "input_tokens": 40},
                 }
             ).encode()
         )
 
     monkeypatch.setattr(model_worker, "urlopen", urlopen)
-    backend = HttpBackend("kev", {"endpoint": "http://localhost"})
+    monkeypatch.setattr(model_worker, "sleep", lambda seconds: None)
+    backend = HttpBackend("typesafe/jev-1.13", {"endpoint": "https://openrouter.ai/api"})
     result = backend.predict(
         "post",
         {
@@ -136,5 +145,23 @@ def test_http_backend_sends_systemone_choice_criteria_as_object(monkeypatch):
         },
     )
 
-    assert captured["questions"]["route"]["criteria"] == {"a": "a", "b": "b"}
+    assert backend.url == "https://openrouter.ai/api/v1/systemone"
+    assert len(captured) == 2
+    assert captured[1]["questions"]["route"]["criteria"] == {"a": "a", "b": "b"}
     assert result["answers"]["route"]["choice"] == "b"
+    assert result["usage"]["api_cost_usd"] == 0.00002
+    assert result["served_model"] == "typesafe/jev-1.13-20260917"
+
+
+def test_http_backend_does_not_retry_client_errors(monkeypatch):
+    calls = []
+
+    def urlopen(request, timeout):
+        calls.append(1)
+        raise HTTPError(request.full_url, 402, "credits", {}, io.BytesIO(b"no credits"))
+
+    monkeypatch.setattr(model_worker, "urlopen", urlopen)
+    backend = HttpBackend("typesafe/jev-1.13", {"endpoint": "https://openrouter.ai/api"})
+    with pytest.raises(RuntimeError, match="HTTP 402"):
+        backend.predict("post", {"route": {"type": "choice", "instructions": "Choose.", "criteria": ["a", "b"]}})
+    assert len(calls) == 1

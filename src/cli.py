@@ -36,7 +36,7 @@ def _prepare_http_credentials(
 
     saved = model_credentials(model)
     supplied_endpoint = getattr(args, "endpoint", None)
-    endpoint = supplied_endpoint or saved.get("endpoint")
+    endpoint = supplied_endpoint or saved.get("endpoint") or entry.get("default_endpoint")
     if force or not endpoint:
         if not console.is_terminal:
             raise RuntimeError(

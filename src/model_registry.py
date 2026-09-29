@@ -95,6 +95,19 @@ MODEL_REGISTRY: dict[str, dict] = {
         "max_options": None,
         "requires_endpoint": True,
     },
+    **{
+        model: {
+            "adapter": "systemone-http",
+            "revision": None,
+            "extra": None,
+            "probabilities": "native",
+            "max_questions": None,
+            "max_options": None,
+            "requires_endpoint": True,
+            "default_endpoint": "https://openrouter.ai/api",
+        }
+        for model in ("typesafe/jev-1.13", "~typesafe/jev-latest")
+    },
 }
 
 EXTRA_IMPORTS = {
@@ -124,6 +137,7 @@ def doctor(value: str, endpoint: str | None = None) -> list[tuple[str, bool, str
     if module:
         checks.append(("runtime", find_spec(module) is not None, module))
     if entry.get("requires_endpoint"):
+        endpoint = endpoint or entry.get("default_endpoint")
         checks.append(("endpoint", bool(endpoint), endpoint or "pass --endpoint"))
     checks.append(("model", True, model))
     return checks

@@ -65,6 +65,18 @@ srb run hf://jaredpalmer/kev-4b \
 
 `srb configure` changes saved credentials. The API key is masked while typing and reaches the worker only through its environment; it is never placed in process arguments or run metadata. An empty key supports unauthenticated local endpoints.
 
+Jev runs through OpenRouter's native System One endpoint; only an OpenRouter API key is needed, the endpoint defaults to `https://openrouter.ai/api`:
+
+```bash
+srb configure typesafe/jev-1.13
+srb run typesafe/jev-1.13 \
+  --dataset data/subreddit_dynamic \
+  --task-config tasks/subreddit_dynamic/medium.yaml \
+  --output results/jev-medium
+```
+
+`~typesafe/jev-latest` is also registered but follows new releases; prefer the versioned ID for published results. HTTP runs record the version the server reports (for Jev, e.g. `typesafe/jev-1.13-20260917`) as `served_model` in `run.json`, and a resume against a different served version is refused. Transient 429/5xx responses are retried with backoff; OpenRouter's per-request `usage.cost` is recorded as `api_cost_usd`.
+
 Any other model can use an external JSONL worker without adding its dependencies to the benchmark process:
 
 ```bash
