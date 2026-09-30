@@ -2,6 +2,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from http.client import RemoteDisconnected
 from urllib.error import HTTPError
 
 import pytest
@@ -165,3 +166,20 @@ def test_http_backend_does_not_retry_client_errors(monkeypatch):
     with pytest.raises(RuntimeError, match="HTTP 402"):
         backend.predict("post", {"route": {"type": "choice", "instructions": "Choose.", "criteria": ["a", "b"]}})
     assert len(calls) == 1
+
+
+def test_http_backend_retries_dropped_connections(monkeypatch):
+    calls = []
+
+    def urlopen(request, timeout):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RemoteDisconnected("Remote end closed connection without response")
+        return io.BytesIO(json.dumps({"answers": {"route": {"choice": "a"}}}).encode())
+
+    monkeypatch.setattr(model_worker, "urlopen", urlopen)
+    monkeypatch.setattr(model_worker, "sleep", lambda seconds: None)
+    backend = HttpBackend("typesafe/jev-1.13", {"endpoint": "https://openrouter.ai/api"})
+    result = backend.predict("post", {"route": {"type": "choice", "instructions": "Choose.", "criteria": ["a", "b"]}})
+    assert result["answers"]["route"]["choice"] == "a"
+    assert len(calls) == 2

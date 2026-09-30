@@ -8,7 +8,8 @@ import os
 import sys
 from pathlib import Path
 from time import perf_counter, sleep
-from urllib.error import HTTPError, URLError
+from http.client import HTTPException
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
@@ -102,7 +103,9 @@ class HttpBackend:
                     sleep(min(2**attempt, 30))
                     continue
                 raise RuntimeError(f"HTTP {error.code} from {self.url}: {detail}") from error
-            except (URLError, TimeoutError):
+            # OSError covers URLError, timeouts and connection resets; HTTPException covers
+            # RemoteDisconnected / bad status lines when the server drops a keep-alive connection.
+            except (OSError, HTTPException):
                 if attempt == attempts - 1:
                     raise
                 sleep(min(2**attempt, 30))
