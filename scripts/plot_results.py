@@ -35,8 +35,17 @@ def style(ax, title, subtitle):
 
 plt.rcParams.update({"font.family": "Helvetica Neue", "font.size": 11})
 
-# 1. Headline over all communities (no supervised baseline: unseen communities have no training posts).
+# 1. Headline over all communities. The supervised baseline only exists for seen communities
+#    (unseen ones have no training posts), so it is a muted reference, labelled as such.
 fig, ax = plt.subplots(figsize=(8.6, 5.2))
+logreg = {m["k"]: m["accuracy"] for m in json.load(open(R + "baselines/logreg-seen-medium.json"))["metrics"]
+          if m["difficulty"] == "hard"}
+ax.plot(KS, [logreg[k] for k in KS], color="#9ca3af", linestyle="--", linewidth=1.8, marker="o", markersize=4)
+for k in KS:
+    ax.annotate(f"{logreg[k]:.0%}", (k, logreg[k]), textcoords="offset points", xytext=(0, 8), ha="center",
+                color="#9ca3af", fontsize=9)
+ax.annotate("Supervised logreg\n(seen communities only)", (KS[-1], logreg[KS[-1]]), textcoords="offset points",
+            xytext=(14, 0), va="center", color="#9ca3af", fontsize=9.5, linespacing=1.2)
 for name, folder, color in MODELS:
     r = rows(folder, DESC)
     acc = [r[k]["accuracy"] for k in KS]
@@ -54,7 +63,7 @@ ax.annotate("random guess", (16, 1 / 16), textcoords="offset points", xytext=(0,
 ax.set_xscale("log", base=2)
 ax.set_xticks(KS, [str(k) for k in KS])
 ax.set_xlim(3.3, 170)
-ax.set_ylim(0, 0.75)
+ax.set_ylim(0, 0.82)
 ax.set_xlabel("Number of candidate subreddits (log scale)")
 ax.set_ylabel("Accuracy")
 style(ax, "Headline: all 1,242 communities", "Post titles only · look-alike candidates · subreddit names hidden")
