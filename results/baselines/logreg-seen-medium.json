@@ -1,0 +1,93 @@
+{
+  "baseline": "logistic-regression on title embeddings (supervised, seen track only)",
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "embedding_revision": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+  "train_posts": 192515,
+  "train_per_community": 200,
+  "seen_communities": 994,
+  "task_config": "tasks/subreddit_dynamic/medium.yaml",
+  "benchmark_seed": 20260926,
+  "metrics": [
+    {
+      "community_track": "seen",
+      "difficulty": "random",
+      "k": 4,
+      "examples": 1988,
+      "accuracy": 0.9502012072434608,
+      "accuracy_ci95_low": 0.9406438631790744,
+      "accuracy_ci95_high": 0.959758551307847
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "random",
+      "k": 16,
+      "examples": 1988,
+      "accuracy": 0.8707243460764588,
+      "accuracy_ci95_low": 0.8561368209255533,
+      "accuracy_ci95_high": 0.8848088531187123
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "random",
+      "k": 64,
+      "examples": 1988,
+      "accuracy": 0.7681086519114688,
+      "accuracy_ci95_low": 0.7494969818913481,
+      "accuracy_ci95_high": 0.7857142857142857
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "semantic",
+      "k": 4,
+      "examples": 1988,
+      "accuracy": 0.8827967806841046,
+      "accuracy_ci95_low": 0.8697183098591549,
+      "accuracy_ci95_high": 0.89738430583501
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "semantic",
+      "k": 16,
+      "examples": 1988,
+      "accuracy": 0.7515090543259557,
+      "accuracy_ci95_low": 0.7338908450704226,
+      "accuracy_ci95_high": 0.7696177062374245
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "semantic",
+      "k": 64,
+      "examples": 1988,
+      "accuracy": 0.6036217303822937,
+      "accuracy_ci95_low": 0.5819919517102615,
+      "accuracy_ci95_high": 0.6247484909456741
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "hard",
+      "k": 4,
+      "examples": 1988,
+      "accuracy": 0.7183098591549296,
+      "accuracy_ci95_low": 0.6986795774647888,
+      "accuracy_ci95_high": 0.7379275653923542
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "hard",
+      "k": 16,
+      "examples": 1988,
+      "accuracy": 0.5930583501006036,
+      "accuracy_ci95_low": 0.5729250503018108,
+      "accuracy_ci95_high": 0.614185110663984
+    },
+    {
+      "community_track": "seen",
+      "difficulty": "hard",
+      "k": 64,
+      "examples": 1988,
+      "accuracy": 0.5372233400402414,
+      "accuracy_ci95_low": 0.5150779678068411,
+      "accuracy_ci95_high": 0.5588531187122736
+    }
+  ]
+}

@@ -35,13 +35,18 @@ def _normalize_result(result: dict, questions: dict) -> dict:
         if choice not in labels:
             raise ValueError(f"{qid}: worker selected unknown option {choice!r}")
         normalized[qid] = {"choice": choice}
+        # Keep whatever else the model said (confidence, legend, …) so nothing needs a rerun later.
+        extra = {key: value for key, value in answer.items() if key not in ("choice", "decision", "probabilities")}
+        if extra:
+            normalized[qid]["extra"] = extra
         if probabilities is not None:
             missing = set(labels) - set(probabilities)
             if missing:
                 raise ValueError(f"{qid}: probabilities missing options {sorted(missing)}")
             normalized[qid]["probabilities"] = {label: float(probabilities[label]) for label in labels}
     usage = result.get("usage") or {}
-    return {"answers": normalized, "usage": usage}
+    response = {key: value for key, value in result.items() if key not in ("answers", "usage")} if "answers" in result else {}
+    return {"answers": normalized, "usage": usage, **({"response": response} if response else {})}
 
 
 class HttpBackend:

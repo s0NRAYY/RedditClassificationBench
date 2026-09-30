@@ -167,6 +167,13 @@ def _prediction_rows(
                 "output_tokens": output_tokens,
                 "forward_count": forward_count,
                 "api_cost_usd": float(usage.get("api_cost_usd", 0)) / count,
+                # Full record, so any later metric (ranks, top-k, recalibration) needs no rerun.
+                "candidates": meta["candidates"],
+                "choice": answer["choice"],
+                "probabilities": probabilities,
+                "answer_extra": answer.get("extra"),
+                "response": result.get("response"),
+                "batch_usage": usage,
             }
         )
     return rows

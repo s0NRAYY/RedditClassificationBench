@@ -11,6 +11,8 @@
 - Metrics add a pooled `community_track: all`; the headline metric (hard, descriptions only, all tracks, K = 16/64) is printed by `srb run` and first in `srb compare`.
 - `srb compare` accepts runs whose worker limits skipped some `K`, comparing the shared counts.
 - Label-ambiguity estimate for the headline slice (`tasks/subreddit_dynamic/ambiguity.md`, LLM-annotated).
+- `predictions.jsonl` rows now keep the full record: ordered candidates, chosen label, the complete probability vector, any extra model output (e.g. confidence) and the raw per-request response metadata and usage. New metrics (ranks, top-k, recalibration) can be computed from existing runs without rerunning.
+- Supervised reference baseline (`scripts/logreg_baseline.py`): logistic regression on `BAAI/bge-small-en-v1.5` title embeddings trained on seen-train posts; seen track only, since unseen communities have no training posts. `medium` hard: 0.718 / 0.593 / 0.537 at K = 4 / 16 / 64.
 
 ## v0.3.0 — Public alpha
 

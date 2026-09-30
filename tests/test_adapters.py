@@ -124,8 +124,10 @@ def test_http_backend_retries_and_reports_cost_and_served_model(monkeypatch):
                         "route": {
                             "choice": "b",
                             "probabilities": {"a": 0.25, "b": 0.75},
+                            "confidence": 0.75,
                         }
                     },
+                    "id": "gen-1",
                     "model": "typesafe/jev-1.13-20260917",
                     "usage": {"cost": 0.00002, "input_tokens": 40},
                 }
@@ -152,6 +154,16 @@ def test_http_backend_retries_and_reports_cost_and_served_model(monkeypatch):
     assert result["answers"]["route"]["choice"] == "b"
     assert result["usage"]["api_cost_usd"] == 0.00002
     assert result["served_model"] == "typesafe/jev-1.13-20260917"
+
+    # The prediction row keeps everything needed to recompute any metric later without a rerun.
+    meta = {"route": {"candidates": ["sub_a", "sub_b"], "labels": ["a", "b"],
+                      "representation": "name-only", "difficulty": "hard", "k": 2}}
+    [row] = _prediction_rows({"post_id": "p", "subreddit": "sub_b"}, "seen", "title", result, meta, 1.0)
+    assert row["candidates"] == ["sub_a", "sub_b"]
+    assert row["probabilities"] == [0.25, 0.75]
+    assert row["answer_extra"] == {"confidence": 0.75}
+    assert row["response"]["id"] == "gen-1"
+    assert row["batch_usage"]["input_tokens"] == 40
 
 
 def test_http_backend_does_not_retry_client_errors(monkeypatch):
