@@ -1,0 +1,96 @@
+{
+  "model": "jaredpalmer/kev-0.8b",
+  "revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e",
+  "adapter": {
+    "type": "capabilities",
+    "protocol": 1,
+    "probabilities": "native",
+    "max_questions": null,
+    "max_options": null,
+    "modalities": [
+      "text"
+    ],
+    "batching": true,
+    "runtime_model": "jaredpalmer/kev-0.8b",
+    "resolved_revision": null,
+    "revision_status": "server-unavailable",
+    "reference_revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e"
+  },
+  "registry_entry": {
+    "adapter": "systemone-http",
+    "revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e",
+    "extra": null,
+    "probabilities": "native",
+    "max_questions": null,
+    "max_options": null,
+    "requires_endpoint": true
+  },
+  "model_runtime": {
+    "worker_command": [
+      "/tmp/srb-clean/bin/python",
+      "-m",
+      "model_worker",
+      "--adapter",
+      "systemone-http",
+      "--model",
+      "jaredpalmer/kev-0.8b",
+      "--options",
+      "{\"probabilities\":\"native\",\"max_questions\":null,\"max_options\":null,\"revision\":\"9a45d25eb2ab761841196625383fa1dff0e56c1e\",\"endpoint\":\"http://127.0.0.1:9876\",\"api_key_env\":\"SRB_MODEL_API_KEY\"}"
+    ],
+    "worker_protocol": 1,
+    "capabilities": {
+      "type": "capabilities",
+      "protocol": 1,
+      "probabilities": "native",
+      "max_questions": null,
+      "max_options": null,
+      "modalities": [
+        "text"
+      ],
+      "batching": true,
+      "runtime_model": "jaredpalmer/kev-0.8b",
+      "resolved_revision": null,
+      "revision_status": "server-unavailable",
+      "reference_revision": "9a45d25eb2ab761841196625383fa1dff0e56c1e"
+    }
+  },
+  "python_version": "3.13.15",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "byteorder": "little",
+  "dataset_build": {
+    "rows_read": 1048855,
+    "rejected_missing_title": 0,
+    "rejected_duplicate_titles": 9077,
+    "title_posts": 1026755,
+    "eligible_posts": 874928,
+    "eligible_communities": 1242,
+    "negative_pools": 3726,
+    "evaluation_instances": 949206,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "benchmark_seed": 20260926,
+    "available_text_modes": [
+      "title"
+    ],
+    "source_mode": "title-only"
+  },
+  "text_modes": [
+    "title"
+  ],
+  "representations": [
+    "name-only",
+    "anonymous-id+description"
+  ],
+  "difficulties": [
+    "random",
+    "semantic",
+    "hard"
+  ],
+  "candidate_counts": [
+    4,
+    16,
+    64
+  ],
+  "selected_posts": 2484,
+  "served_model": "jaredpalmer/kev-0.8b"
+}

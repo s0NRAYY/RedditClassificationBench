@@ -21,7 +21,7 @@ LINES = [
     ("Supervised baseline\n(logreg on title embeddings)",
      {m["k"]: m for m in logreg["metrics"] if m["difficulty"] == "hard"}, "#16a34a", "--", 0),
     ("Jev 1.13\n(build 2026-09-17)", model_rows("jev-medium"), "#2563eb", "-", 0),
-    ("Laya (base, zero-shot)\nmultilingual checkpoint", model_rows("laya-medium"), "#ea580c", "-", 6),
+    ("Kev 0.8B\n(zero-shot, local MLX)", model_rows("kev-0.8b-medium"), "#7c3aed", "-", 0),
 ]
 
 plt.rcParams.update({"font.family": "Helvetica Neue", "font.size": 11})
@@ -62,6 +62,6 @@ fig.text(0.07, 0.025,
          "shaded = 95% CI · run 2026-09-29/30",
          fontsize=8.5, color="#6b7280")
 fig.tight_layout(rect=(0, 0.045, 1, 0.88))
-fig.savefig(R + "headline-jev-vs-laya.png", dpi=200)
+fig.savefig(R + "headline.png", dpi=200)
 for name, rows, *_ in LINES:
     print(name.split("\n")[0], [round(rows[k]["accuracy"], 3) for k in KS], rows[4].get("examples"))
