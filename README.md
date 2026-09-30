@@ -6,9 +6,20 @@ The v1 benchmark contains one task: dynamic subreddit routing. A model receives 
 
 The builder creates one paired post set. `title` and `title+selftext` are views over the same `post_id`; splits, targets, negative pools, and candidate permutations do not change between text modes.
 
-## Build
+## Get the data
 
-The preferred raw archive contains `title`, a body column (`selftext`, `body`, or `text`), a subreddit column, and preferably a Reddit post ID or permalink. The upstream public archive currently contains only `label,text`; build that frozen title track explicitly with `--source-mode title-only`. Its `build.json` exposes only the `title` mode, so it cannot be mistaken for the paired track.
+The exact build used for published results is on Hugging Face as [`sonrayll/social-routing-bench`](https://huggingface.co/datasets/sonrayll/social-routing-bench):
+
+```bash
+python -m pip install -e .
+hf download sonrayll/social-routing-bench --repo-type dataset \
+  --revision 56345ac1a2998131d2aa0e0dddf1c670ca14b155 \
+  --local-dir data/subreddit_dynamic
+```
+
+## Build from source
+
+Rebuilding is only needed for a new source archive. The preferred raw archive contains `title`, a body column (`selftext`, `body`, or `text`), a subreddit column, and preferably a Reddit post ID or permalink. The upstream public archive ([TheShadow29/subreddit-classification-dataset](https://github.com/TheShadow29/subreddit-classification-dataset): `cleaned_all_title_data_top.csv`, `req_subreddits.csv`) currently contains only `label,text`; build that frozen title track explicitly with `--source-mode title-only`. Its `build.json` exposes only the `title` mode, so it cannot be mistaken for the paired track.
 
 ```bash
 python -m pip install -e .

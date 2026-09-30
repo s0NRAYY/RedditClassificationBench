@@ -13,6 +13,7 @@
 - Label-ambiguity estimate for the headline slice (`tasks/subreddit_dynamic/ambiguity.md`, LLM-annotated).
 - `predictions.jsonl` rows now keep the full record: ordered candidates, chosen label, the complete probability vector, any extra model output (e.g. confidence) and the raw per-request response metadata and usage. New metrics (ranks, top-k, recalibration) can be computed from existing runs without rerunning.
 - Supervised reference baseline (`scripts/logreg_baseline.py`): logistic regression on `BAAI/bge-small-en-v1.5` title embeddings trained on seen-train posts; seen track only, since unseen communities have no training posts. `medium` hard: 0.718 / 0.593 / 0.537 at K = 4 / 16 / 64.
+- The title-only dataset build is published on Hugging Face as `sonrayll/social-routing-bench` (revision `56345ac1`); README now downloads it instead of requiring a rebuild.
 
 ## v0.3.0 — Public alpha
 
