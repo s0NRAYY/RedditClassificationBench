@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 — 2026-10-01
+
+First published results, still public alpha. Headline (hard look-alike candidates, names hidden, all communities, K = 16 / 64): Jev 1.13 0.483 / 0.411, Kev 0.8B 0.226 / 0.142, Laya (base, zero-shot) 0.086 / 0.022, random 0.063 / 0.016; supervised logreg on seen communities 0.593 / 0.537. More models will be added.
+
+### Added
 
 - `medium` task preset (`tasks/subreddit_dynamic/medium.yaml`): 2 posts per community, all difficulties, `K` ∈ {4, 16, 64}.
 - Task presets may set `posts_per_community` (CLI overrides preset, preset overrides model config).

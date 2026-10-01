@@ -4,13 +4,16 @@ title: "Social Routing Bench"
 type: software
 authors:
   - name: "Social Routing Bench contributors"
-version: 0.2.0
-date-released: 2026-09-26
+version: 0.4.0
+date-released: 2026-10-01
 license: MIT
+repository-code: "https://github.com/s0NRAYY/RedditClassificationBench"
+url: "https://huggingface.co/datasets/sonrayll/social-routing-bench"
 abstract: >-
   A reproducible benchmark for selecting an action from a dynamic,
   runtime-defined set of social communities, with random, semantic, and hard
-  negative candidates and seen- and unseen-community evaluation tracks.
+  negative candidates, name-only and description-only candidate
+  representations, and seen- and unseen-community evaluation tracks.
 keywords:
   - benchmark
   - decision models

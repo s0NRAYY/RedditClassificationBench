@@ -1,0 +1,37 @@
+name: Bug report
+description: Something in the benchmark, CLI or an adapter is broken
+labels: [bug]
+body:
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact `srb` command you ran.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Error output or traceback, and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model and revision
+      placeholder: typesafe/jev-1.13, jaredpalmer/kev-0.8b@9a45d25e, ...
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: macOS 15 arm64, Python 3.13, social-routing-bench 0.4.0
+    validations:
+      required: true
+  - type: textarea
+    id: run-json
+    attributes:
+      label: Relevant part of run.json
+      description: Remove API keys or endpoints you consider private.
+      render: json

@@ -1,0 +1,21 @@
+name: Model request or benchmark feedback
+description: Ask for a model to be evaluated, or question a result or design choice
+labels: [feedback]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Evaluate a model
+        - A result looks wrong
+        - Benchmark design feedback
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: For a model, give its ID, how to run it (Hugging Face, OpenAI-compatible API, System One endpoint, ...) and whether it returns probabilities. For a result, link the run and the slice.
+    validations:
+      required: true
